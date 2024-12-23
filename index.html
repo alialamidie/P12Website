@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS App Signer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>iOS App Signer</h1>
+        <form id="signing-form">
+            <label for="p12-url">P12 File URL:</label>
+            <input type="url" id="p12-url" name="p12_url" required>
+
+            <label for="mobileprovision-url">MobileProvision File URL:</label>
+            <input type="url" id="mobileprovision-url" name="mobileprovision_url" required>
+
+            <label for="p12-password">P12 Password:</label>
+            <input type="password" id="p12-password" name="p12_password" required>
+
+            <label for="ipa-url">IPA File URL:</label>
+            <input type="url" id="ipa-url" name="ipa_url" required>
+
+            <label for="app-name">App Name:</label>
+            <input type="text" id="app-name" name="app_name" required>
+
+            <label for="bundle-id">Bundle Identifier:</label>
+            <input type="text" id="bundle-id" name="bundle_id" required>
+
+            <button type="submit">Sign App</button>
+        </form>
+        <div id="response-message"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
