@@ -6,7 +6,7 @@ app = FastAPI()
 
 # GitHub API configurations
 GITHUB_REPO = "alialamidie/P12Website"  # Replace with your GitHub repo
-GITHUB_TOKEN = "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"  # Replace with your GitHub Personal Access Token
+  # Replace with your GitHub Personal Access Token
 GITHUB_DISPATCH_URL = f"https://api.github.com/repos/{GITHUB_REPO}/dispatches"
 
 @app.post("/sign-app/")
