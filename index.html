@@ -3,35 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iOS App Signer</title>
     <link rel="stylesheet" href="styles.css">
+    <title>iOS App Signer</title>
 </head>
 <body>
     <div class="container">
-        <h1>iOS App Signer</h1>
-        <form id="signing-form">
-            <label for="p12-url">P12 File URL:</label>
-            <input type="url" id="p12-url" name="p12_url" required>
-
-            <label for="mobileprovision-url">MobileProvision File URL:</label>
-            <input type="url" id="mobileprovision-url" name="mobileprovision_url" required>
-
-            <label for="p12-password">P12 Password:</label>
-            <input type="password" id="p12-password" name="p12_password" required>
-
-            <label for="ipa-url">IPA File URL:</label>
-            <input type="url" id="ipa-url" name="ipa_url" required>
-
-            <label for="app-name">App Name:</label>
-            <input type="text" id="app-name" name="app_name" required>
-
-            <label for="bundle-id">Bundle Identifier:</label>
-            <input type="text" id="bundle-id" name="bundle_id" required>
-
+        <h1>Sign Your iOS App</h1>
+        <form id="sign-form">
+            <label for="p12File">P12 File:</label>
+            <input type="file" id="p12File" name="p12File" required><br><br>
+            
+            <label for="mobileProvision">Mobile Provision File:</label>
+            <input type="file" id="mobileProvision" name="mobileProvision" required><br><br>
+            
+            <label for="password">Certificate Password:</label>
+            <input type="password" id="password" name="password" required><br><br>
+            
+            <label for="ipaFile">IPA File:</label>
+            <input type="file" id="ipaFile" name="ipaFile" required><br><br>
+            
+            <label for="appName">App Name:</label>
+            <input type="text" id="appName" name="appName" required><br><br>
+            
+            <label for="bundleId">Bundle Identifier:</label>
+            <input type="text" id="bundleId" name="bundleId" required><br><br>
+            
             <button type="submit">Sign App</button>
         </form>
-        <div id="response-message"></div>
+
+        <div id="result"></div>
     </div>
-    <script src="script.js"></script>
+
+    <script>
+        document.getElementById("sign-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            
+            // Create FormData object to send the files and data
+            const formData = new FormData();
+            formData.append("p12File", document.getElementById("p12File").files[0]);
+            formData.append("mobileProvision", document.getElementById("mobileProvision").files[0]);
+            formData.append("password", document.getElementById("password").value);
+            formData.append("ipaFile", document.getElementById("ipaFile").files[0]);
+            formData.append("appName", document.getElementById("appName").value);
+            formData.append("bundleId", document.getElementById("bundleId").value);
+            
+            // Send the data to the backend API
+            const response = await fetch("http://localhost:8000/sign-app", {
+                method: "POST",
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                document.getElementById("result").innerHTML = `<a href="${data.download_link}" target="_blank">Download Signed IPA</a>`;
+            } else {
+                document.getElementById("result").innerText = "Error: " + data.message;
+            }
+        });
+    </script>
 </body>
 </html>

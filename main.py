@@ -1,44 +1,41 @@
-from fastapi import FastAPI, Form, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 import requests
+from io import BytesIO
 
 app = FastAPI()
 
-# Define GitHub API configurations
-GITHUB_REPO = "<your-github-username>/<your-repo-name>"  # Replace with your GitHub repo
-GITHUB_TOKEN = "<your-github-token>"  # Replace with your GitHub Personal Access Token
+# GitHub API configurations
+GITHUB_REPO = "alialamidie/P12Website"  # Replace with your GitHub repo
+GITHUB_TOKEN = "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"  # Replace with your GitHub Personal Access Token
 GITHUB_DISPATCH_URL = f"https://api.github.com/repos/{GITHUB_REPO}/dispatches"
-
-class AppSigningRequest(BaseModel):
-    p12_url: str
-    mobileprovision_url: str
-    p12_password: str
-    ipa_url: str
-    app_name: str
-    bundle_id: str
 
 @app.post("/sign-app/")
 async def sign_app(
-    p12_url: str = Form(...),
-    mobileprovision_url: str = Form(...),
-    p12_password: str = Form(...),
-    ipa_url: str = Form(...),
-    app_name: str = Form(...),
-    bundle_id: str = Form(...)
+    p12File: UploadFile = File(...),
+    mobileProvision: UploadFile = File(...),
+    password: str = Form(...),
+    ipaFile: UploadFile = File(...),
+    appName: str = Form(...),
+    bundleId: str = Form(...)
 ):
     """
     API Endpoint to trigger app signing via GitHub Actions
     """
+    # Save the files temporarily
+    p12_url = await save_file(p12File)
+    mobileprovision_url = await save_file(mobileProvision)
+    ipa_url = await save_file(ipaFile)
+    
     # Prepare payload for GitHub Actions
     payload = {
         "event_type": "sign-app",
         "client_payload": {
             "p12_url": p12_url,
             "mobileprovision_url": mobileprovision_url,
-            "p12_password": p12_password,
+            "p12_password": password,
             "ipa_url": ipa_url,
-            "app_name": app_name,
-            "bundle_id": bundle_id,
+            "app_name": appName,
+            "bundle_id": bundleId,
         },
     }
 
@@ -51,12 +48,19 @@ async def sign_app(
     response = requests.post(GITHUB_DISPATCH_URL, headers=headers, json=payload)
 
     if response.status_code == 204:
-        return {
-            "message": "App signing request has been successfully triggered. Please check your email or return for updates.",
-            "status": "success",
-        }
+        return {"message": "App signing request successfully triggered.", "status": "success", "download_link": "signed_ipa_url"}
     else:
         raise HTTPException(status_code=response.status_code, detail=response.json())
+
+async def save_file(file: UploadFile):
+    """
+    Helper function to save a file temporarily and return its URL or path.
+    """
+    # You can modify this to save files on a server or cloud storage.
+    file_path = f"temp/{file.filename}"
+    with open(file_path, "wb") as f:
+        f.write(file.file.read())
+    return file_path
 
 @app.get("/")
 async def root():
