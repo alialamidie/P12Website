@@ -1,0 +1,41 @@
+name: iOS App Signing
+
+on:
+  repository_dispatch:
+    types: [sign-app]  # Event triggered by the FastAPI backend
+
+jobs:
+  sign:
+    runs-on: macos-latest  # Use the latest macOS runner provided by GitHub
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 2: Download required files from the URLs provided by the FastAPI backend
+      - name: Download Files
+        run: |
+          curl -o app.ipa "${{ github.event.client_payload.ipa_url }}"
+          curl -o certificate.p12 "${{ github.event.client_payload.p12_url }}"
+          curl -o profile.mobileprovision "${{ github.event.client_payload.mobileprovision_url }}"
+
+      # Step 3: Import the certificate into the keychain
+      - name: Import Certificate
+        run: |
+          security import certificate.p12 -k ~/Library/Keychains/login.keychain -P "${{ github.event.client_payload.p12_password }}"
+
+      # Step 4: Re-sign the IPA file with the provided certificate and provisioning profile
+      - name: Re-sign IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath app.ipa \
+            -exportOptionsPlist profile.mobileprovision \
+            -exportPath signed_app.ipa
+
+      # Step 5: Upload the signed IPA to GitHub Artifacts for download
+      - name: Upload Signed IPA
+        uses: actions/upload-artifact@v3
+        with:
+          name: signed-app
+          path: signed_app.ipa
