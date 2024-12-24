@@ -4,6 +4,7 @@ import requests
 from io import BytesIO
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from dropbox.exceptions import ApiError
 app = FastAPI()
 
 origins = [
@@ -14,20 +15,19 @@ origins = [
 # Allow CORS for your frontend (replace "*" with the specific domain of your frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://alialamidie.github.io"],  # Allow only this origin
+    allow_origins=origins,  # Allow these origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all HTTP methods (POST, GET, etc.)
+    allow_headers=["*"],  # Allow all headers
 )
-
 
 # GitHub API configurations
 GITHUB_REPO = "alialamidie/P12Website"  # Replace with your GitHub repo
-GITHUB_TOKEN = "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"  # Replace with your GitHub Personal Access Token
+GITHUB_TOKEN = "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"  # Replace with your GitHub Personal Access Token
 GITHUB_DISPATCH_URL = f"https://api.github.com/repos/{GITHUB_REPO}/dispatches"
 
 # Dropbox API configurations
-DROPBOX_ACCESS_TOKEN = "sl.CDO6KKTILW6nyfXan1vCRQO5Oh0dzZFsHBknrzeFQhIt9U7wlDsSoZvWu9PRR8JYxX9ro2ySIsFFGu9svzHfdqdcG_d4ttyX0y6YwpoHh-APt_AlhpSvxNNIV29r5LPR1ZqjArPEt3b5"  # Replace with your Dropbox access token
+DROPBOX_ACCESS_TOKEN = "sl.CDNR6auO2DenU_-tQ9pbBLVwJ3EfgzPePHtKIwGChTWclceokUrZ0VggwcQ7R9oKCeVILZ959DMYzoyPeScykJXdYJyNVZFH4qGVS87Yf64J5cx-nNyLbxxQ6I1LbJgW5PCmNPdTRD0BSFBmb5GJ8Tk"  # Replace with your Dropbox access token
 dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
 
 @app.post("/sign-app/")
@@ -69,12 +69,14 @@ async def sign_app(
     response = requests.post(GITHUB_DISPATCH_URL, headers=headers, json=payload)
 
     if response.status_code == 204:
-        # Upload the IPA file to Dropbox after signing
-        signed_ipa_url = await upload_to_dropbox("signed_app.ipa")
+        # Upload the signed IPA file to Dropbox after signing
+        # Ensure that you pass the correct file name or path of the signed IPA file
+        signed_ipa_url = await upload_to_dropbox(ipa_url)  # Change here: pass the correct file path
 
         return {"message": "App signing request successfully triggered.", "status": "success", "download_link": signed_ipa_url}
     else:
         raise HTTPException(status_code=response.status_code, detail=response.json())
+
 
 async def save_file(file: UploadFile):
     """
@@ -91,21 +93,41 @@ async def save_file(file: UploadFile):
 async def upload_to_dropbox(file_path: str) -> str:
     """
     Upload a file to Dropbox and return the shareable link.
+    If a shared link already exists, return the existing link.
     """
     with open(file_path, "rb") as f:
         file_content = f.read()
 
-    # Upload file to Dropbox
-    dropbox_path = f"/{file_path}"  # The path in Dropbox
-    dbx.files_upload(file_content, dropbox_path, mute=True)
+    # Use the base file name for the Dropbox path
+    dropbox_path = f"/{os.path.basename(file_path)}"
 
-    # Create a shared link for the uploaded file
-    shared_link_metadata = dbx.sharing_create_shared_link_with_settings(dropbox_path)
+    try:
+        # Upload file to Dropbox
+        dbx.files_upload(file_content, dropbox_path, mute=True)
 
-    # Extract the link to the file
-    download_link = shared_link_metadata.url.replace('?dl=0', '?dl=1')  # Ensure it's a direct download link
-    
-    return download_link
+        try:
+            # Try to create or get the existing shared link
+            shared_link_metadata = dbx.sharing_create_shared_link_with_settings(dropbox_path)
+        except ApiError as e:
+            # Handle case where shared link already exists
+            if isinstance(e.error, dropbox.sharing.CreateSharedLinkWithSettingsError) and \
+               e.error.is_shared_link_already_exists():
+                # Extract shared link metadata from the error object
+                shared_link_metadata = e.error.shared_link_already_exists
+            else:
+                # For other API errors, raise them
+                raise e
+
+        # Check if the metadata contains the URL and modify for direct download
+        if hasattr(shared_link_metadata, 'url'):
+            download_link = shared_link_metadata.url.replace('?dl=0', '?dl=1')  # Ensure it's a direct download link
+            return download_link
+        else:
+            raise HTTPException(status_code=500, detail="Failed to retrieve the download link from Dropbox.")
+
+    except ApiError as e:
+        print(f"Error uploading file to Dropbox: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload file to Dropbox")
 
 @app.get("/")
 async def root():
