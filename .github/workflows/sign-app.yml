@@ -13,28 +13,32 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Step 2: Download required files
-      - name: Download Files
-        run: |
-          curl -o app.ipa "${{ github.event.client_payload.ipa_url }}"
-          curl -o certificate.p12 "${{ github.event.client_payload.p12_url }}"
-          curl -o profile.mobileprovision "${{ github.event.client_payload.mobileprovision_url }}"
+      # Step 2: Set up Dropbox CLI with Access Token
+      - name: Set up Dropbox CLI
+        uses: wzieba/dropbox-upload-action@v1
+        with:
+          access_token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}  # Store the token in GitHub secrets
 
-      # Step 3: Import Certificate
+      # Step 3: Download files from Dropbox
+      - name: Download P12, Provision, and IPA from Dropbox
+        run: |
+          dropbox_download /path/to/dropbox/p12_file.p12 certificate.p12
+          dropbox_download /path/to/dropbox/mobileprovision_file.mobileprovision profile.mobileprovision
+          dropbox_download /path/to/dropbox/ipa_file.ipa app.ipa
+
+      # Step 4: Import Certificate
       - name: Import Certificate
         run: |
           security import certificate.p12 -k ~/Library/Keychains/login.keychain -P "${{ github.event.client_payload.p12_password }}"
 
-      # Step 4: Re-sign IPA File
+      # Step 5: Re-sign IPA File
       - name: Re-sign IPA
         run: |
           mkdir resigned
           /usr/bin/codesign --force --sign "Apple Distribution: Your Name" --entitlements profile.mobileprovision app.ipa
           mv app.ipa resigned/signed_app.ipa
 
-      # Step 5: Upload Signed IPA
-      - name: Upload Signed IPA
-        uses: actions/upload-artifact@v3
-        with:
-          name: signed-app
-          path: resigned/signed_app.ipa
+      # Step 6: Upload Signed IPA to Dropbox
+      - name: Upload Signed IPA to Dropbox
+        run: |
+          dropbox_upload resigned/signed_app.ipa /path/to/dropbox/signed_app.ipa
