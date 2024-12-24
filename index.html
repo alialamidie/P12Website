@@ -53,20 +53,20 @@
               body: formData,
             });
             if (!response.ok) {
-                const errorDetails = await response.json();
-                console.error("Error response:", errorDetails);
-                alert("Request failed: " + response.status);
-            } else {
-                const data = await response.json();
-                console.log("Success:", data);
+                const errorMessage = await response.text();
+                console.error("Error response:", errorMessage);
+                alert(`Error: ${errorMessage}`);
+                return;
 }
-            const data = await response.json();
-            
-            if (response.ok) {
-                document.getElementById("result").innerHTML = `<a href="${data.download_link}" target="_blank">Download Signed IPA</a>`;
-            } else {
-                document.getElementById("result").innerText = "Error: " + data.message;
-            }
+const data = await response.json();
+console.log("Response data:", data);
+if (data.download_link) {
+    alert(`Success! Download link: ${data.download_link}`);
+    window.open(data.download_link, "_blank");
+} else {
+    alert("Success, but no download link was returned.");
+}
+
         });
     </script>
 </body>
