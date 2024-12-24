@@ -2,8 +2,24 @@ import dropbox
 from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 import requests
 from io import BytesIO
-
+from fastapi.middleware.cors import CORSMiddleware
+import os
 app = FastAPI()
+
+origins = [
+    "https://alialamidie.github.io",  # Allow only this origin
+    # You can add other domains here if needed
+]
+
+# Allow CORS for your frontend (replace "*" with the specific domain of your frontend)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://alialamidie.github.io"],  # Allow only this origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # GitHub API configurations
 GITHUB_REPO = "alialamidie/P12Website"  # Replace with your GitHub repo
@@ -64,11 +80,14 @@ async def save_file(file: UploadFile):
     """
     Helper function to save a file temporarily and return its URL or path.
     """
-    file_path = f"temp/{file.filename}"
+    temp_dir = "temp"
+    os.makedirs(temp_dir, exist_ok=True)  # Create the 'temp' directory if it doesn't exist
+
+    file_path = os.path.join(temp_dir, file.filename)
     with open(file_path, "wb") as f:
         f.write(file.file.read())
+    
     return file_path
-
 async def upload_to_dropbox(file_path: str) -> str:
     """
     Upload a file to Dropbox and return the shareable link.
