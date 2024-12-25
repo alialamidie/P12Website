@@ -5,17 +5,14 @@ __pycache__/
 *.pyd
 *.so
 
-# Environment and configuration files
-.env
-*.env
+echo "config.py" >> .gitignore
 
 # OS generated files
 .DS_Store
 Thumbs.db
 
-# Virtual environment
-venv/
-env/
+.env
+
 
 # Logs and debugging
 *.log
