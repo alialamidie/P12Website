@@ -1,0 +1,55 @@
+# Python bytecode
+*.pyc
+*.pyo
+__pycache__/
+*.pyd
+*.so
+
+# Environment and configuration files
+.env
+*.env
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Virtual environment
+venv/
+env/
+
+# Logs and debugging
+*.log
+*.out
+*.err
+logs/
+
+# Temporary files
+temp/
+*.tmp
+*.swp
+*.swo
+*.bak
+
+# Dropbox cache files (if any)
+.dropbox
+
+# IDE and editor-specific files
+.vscode/
+.idea/
+*.iml
+*.code-workspace
+
+# PyCharm specific
+*.pyc
+__pycache__/
+*.coverage
+.coverage.*
+
+# FastAPI-specific (e.g., compiled template files, build artifacts)
+*.egg-info/
+*.eggs/
+dist/
+build/
+
+# GitHub Actions tokens (if accidentally stored)
+*.token

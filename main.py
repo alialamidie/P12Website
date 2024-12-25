@@ -4,28 +4,22 @@ import requests
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dropbox.exceptions import ApiError
+from config import GITHUB_REPO, GITHUB_TOKEN, DROPBOX_ACCESS_TOKEN, ALLOWED_ORIGINS
 
 app = FastAPI()
 
-origins = [
-    "https://alialamidie.github.io",  # Allow only this origin
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Allow specific origins
+    allow_origins=ALLOWED_ORIGINS,  # Use ALLOWED_ORIGINS from config
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
 
 # GitHub API configurations
-GITHUB_REPO = "alialamidie/P12Website"
-GITHUB_TOKEN = "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"
 GITHUB_DISPATCH_URL = f"https://api.github.com/repos/{GITHUB_REPO}/dispatches"
 
 # Dropbox API configurations
-DROPBOX_ACCESS_TOKEN = "sl.CDPlYjcxeHAu4yvR66GYkNcRtkwSAoUIFwrnSlUlhMRmziSf8Lg_NoAwLnF2kLvc7J-uJQmtUE7J8yPFHWXaCIbb8DWt6_VvLQwYxpOgisQwfww5FBPnLVeBJAC5_WcGVB_A1cfI9rud2p4VPDhH2eU"
 dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
 
 @app.post("/sign-app/")
@@ -41,9 +35,9 @@ async def sign_app(
     API Endpoint to trigger app signing via GitHub Actions and upload to Dropbox.
     """
     # Save the files temporarily
-    p12_url = await save_file(p12File)
-    mobileprovision_url = await save_file(mobileProvision)
-    ipa_url = await save_file(ipaFile)
+    p12_url = await save_file(p12File, appName)
+    mobileprovision_url = await save_file(mobileProvision, appName)
+    ipa_url = await save_file(ipaFile, appName)
     
     # Prepare payload for GitHub Actions
     payload = {
@@ -68,34 +62,34 @@ async def sign_app(
 
     if response.status_code == 204:
         # Upload the signed IPA file to Dropbox
-        signed_ipa_url = await upload_to_dropbox(ipa_url)
+        signed_ipa_url = await upload_to_dropbox(ipa_url, appName)
         return {"message": "App signing request successfully triggered.", "status": "success", "download_link": signed_ipa_url}
     else:
         raise HTTPException(status_code=response.status_code, detail=response.json())
 
 
-async def save_file(file: UploadFile):
+async def save_file(file: UploadFile, app_name: str):
     """
     Helper function to save a file temporarily and return its path.
     """
     temp_dir = "temp"
     os.makedirs(temp_dir, exist_ok=True)
 
-    file_path = os.path.join(temp_dir, file.filename)
+    file_path = os.path.join(temp_dir, f"{app_name}_{file.filename}")
     with open(file_path, "wb") as f:
         f.write(await file.read())  # Corrected for async file reading
     
     return file_path
 
 
-async def upload_to_dropbox(file_path: str) -> str:
+async def upload_to_dropbox(file_path: str, app_name: str) -> str:
     """
     Upload a file to Dropbox and return a shareable link.
     """
     with open(file_path, "rb") as f:
         file_content = f.read()
 
-    dropbox_path = f"/{os.path.basename(file_path)}"
+    dropbox_path = f"/{app_name}_{os.path.basename(file_path)}"
 
     try:
         # Upload file to Dropbox
