@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from dropbox.exceptions import ApiError
 from config import GITHUB_REPO, GITHUB_TOKEN, DROPBOX_ACCESS_TOKEN, ALLOWED_ORIGINS
-
+from mangum import Mangum
 app = FastAPI()
 
 app.add_middleware(
@@ -113,3 +113,5 @@ async def upload_to_dropbox(file_path: str, app_name: str) -> str:
 @app.get("/")
 async def root():
     return {"message": "iOS App Signing Backend is Running!"}
+
+handler = Mangum(app)
